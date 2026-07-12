@@ -46,8 +46,8 @@ importers:
         specifier: 2.0.5
         version: 2.0.5
       '@ghostery/adblocker-electron':
-        specifier: 2.18.0
-        version: 2.18.0(electron@42.5.0)
+        specifier: 2.18.1
+        version: 2.18.1(electron@42.5.0)
       '@ghostery/adblocker-electron-preload':
         specifier: 2.18.0
         version: 2.18.0(electron@42.5.0)
@@ -743,24 +743,29 @@ packages:
   '@foobar404/wave@2.0.5':
     resolution: {integrity: sha512-V/ydadtv5ObCw8aEg+Qy3YSq1eyinEWzJfRI43Ovmj7VmAvEdWAdL7MatoMbiIVYPATkNDVF7GOxX1xirxM9dA==}
 
-  '@ghostery/adblocker-content@2.18.0':
-    resolution: {integrity: sha512-hO+SHBKzx8PBqppjO6Haj0d4h+4RUQ+0tpVZjs9wUgxLKZlvvYzlQ9sAHilzIT5ixSn+8LSlrYm+ngf2ugH9XQ==}
+  '@ghostery/adblocker-content@2.18.1':
+    resolution: {integrity: sha512-7OwXvqssrSqceXDMccq1SG2LEp0P899TWv0J52kA4PCjCgdsffdj7wMO98LbiVWEKJ9e00X4V2ZptC4VGYsX/w==}
 
   '@ghostery/adblocker-electron-preload@2.18.0':
     resolution: {integrity: sha512-dtUmIAFfiZowbW+NDQtUy+sceQYl4XfJhnKycBWEWeljQ67EVQgFKbfbkEK4Tr3jmP+GxEUp8dYKzwT05b3gdw==}
     peerDependencies:
       electron: '>11'
 
-  '@ghostery/adblocker-electron@2.18.0':
-    resolution: {integrity: sha512-q8tvkJ247ysebswlT+Ak2OrP4rWqI1Ql4BePR6cbJHh05C0FVak9fnynFw4A5AZyk1+S3eOaoNIOID6yQ20HLA==}
+  '@ghostery/adblocker-electron-preload@2.18.1':
+    resolution: {integrity: sha512-hD2jPy8mmtp+2QvicbU5414IZLwn3kmBzKIH8O7dBQclSdliZRGZ78rEiWuPVZejRjCgpprDrUxLMdpQy6aUMA==}
     peerDependencies:
       electron: '>11'
 
-  '@ghostery/adblocker-extended-selectors@2.18.0':
-    resolution: {integrity: sha512-oeSb/1liYplCq76rrPDmR7A69kNB6WsWjPfcsJFkrPip+WUd83Xbc+I5fnZ36Id3IOyegozZG1ucr3ywwC7OyQ==}
+  '@ghostery/adblocker-electron@2.18.1':
+    resolution: {integrity: sha512-hLjy85DKl63oSyunZ4VOMk3WW/utTYCuicxw7oTvZok+Qcw+5Mxs6u+04YwwD2nezUmgyiLlUJtxoXnR8qFfSA==}
+    peerDependencies:
+      electron: '>11'
 
-  '@ghostery/adblocker@2.18.0':
-    resolution: {integrity: sha512-u0XWX+kZtBTqjfa+saNXMI2ZLzaoeT3tASjDuBqQ3WYKquLh15Z3nCBIPruT63nMRr41MZLwB8F6jZPIhsM3dA==}
+  '@ghostery/adblocker-extended-selectors@2.18.1':
+    resolution: {integrity: sha512-FruZMMUhdi0KG8GTTS9hs4njeQu1FyrzVtm9p3JKY6GpCNspy3kioP48JU3ASNzSDYZb5Xu8xbwPoSHJ4RQBeg==}
+
+  '@ghostery/adblocker@2.18.1':
+    resolution: {integrity: sha512-pWMJqpXpuqIlcF3ZZQ2E7ixnC7xhtYn/bpOn3N69vFrAm4wrZCIbKzz1+xSxKWCmJvDT4fg7rN2R6jQwFXm5BA==}
 
   '@ghostery/url-parser@1.3.1':
     resolution: {integrity: sha512-QKqGi+7aDQ4RcyHyCwgEk6B9vWnsBP4Q7htaN0zPJV3ATqTKEQDtSTb9c/AN586oJUDs24YXKcwFYwNweY/YjQ==}
@@ -1631,11 +1636,6 @@ packages:
     resolution: {integrity: sha512-rq9s+JNhf0IChjtDXxllJ7g41oZk5SlXtp0LHwyA5cejwn7vKmKp4pPri6YEePv2PU65sAsegbXtIinmDFDXgQ==}
     peerDependencies:
       acorn: ^6.0.0 || ^7.0.0 || ^8.0.0
-
-  acorn@8.15.0:
-    resolution: {integrity: sha512-NZyJarBfL7nWwIq+FDL6Zp/yHEhePMNnnJ0y3qfieCrmNvYct8uvtiV41UvlSe6apAfk0fY1FbWx+NwfmpvtTg==}
-    engines: {node: '>=0.4.0'}
-    hasBin: true
 
   acorn@8.17.0:
     resolution: {integrity: sha512-xRQbDb9BnwDafYNn6Vwl839DYVjqXYb1XVGtWAZ1kcDc6iwAL4hg3B1dZlRiuENFeO2H53gFG3in621AdERVAg==}
@@ -2827,10 +2827,6 @@ packages:
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
 
-  js-yaml@4.2.0:
-    resolution: {integrity: sha512-ePWsvanv0DWuDRsW8dnt+R4jQ31SCRCQ7hhNcPXZPsoBZiemuZNYGf7adZdqX2D86j6rvKp3RpCxVTSb8WQlOw==}
-    hasBin: true
-
   js-yaml@4.3.0:
     resolution: {integrity: sha512-1td788aAnnZ5qs7V2QIRl1owjtYpbKt749Y3xauqQgwIIGF/xXWz1wMTEBx5O3LK3lXLVuqXPdPxj2BoFHaW9Q==}
     hasBin: true
@@ -3742,10 +3738,6 @@ packages:
     resolution: {integrity: sha512-yEFYrVhod+hdNyx7g5Bnkkb0G6si8HJurOoOEgC8B/O0uXLHlaey/65KRv6cuWBNhBgHKAROVpc7QyYqE5gFng==}
     engines: {node: '>=20'}
 
-  tar@7.5.16:
-    resolution: {integrity: sha512-56adEpPMouktRlBLXiaYFFzZ/3+JXa8P9n7WbR+ibIjtviN55mEaOkiysCnPnWm+7kkui1Dn8J9l+g6zV8731w==}
-    engines: {node: '>=18'}
-
   tar@7.5.19:
     resolution: {integrity: sha512-4LeEWl96twnS2Q7Bz4MGqgazLqO+hJN63GZxXoIqh1T3VweYD997gbU1ItNsQafqqXTXd5WFyFdReLtwvRBNiw==}
     engines: {node: '>=18'}
@@ -4560,28 +4552,33 @@ snapshots:
 
   '@foobar404/wave@2.0.5': {}
 
-  '@ghostery/adblocker-content@2.18.0':
+  '@ghostery/adblocker-content@2.18.1':
     dependencies:
-      '@ghostery/adblocker-extended-selectors': 2.18.0
+      '@ghostery/adblocker-extended-selectors': 2.18.1
 
   '@ghostery/adblocker-electron-preload@2.18.0(electron@42.5.0)':
     dependencies:
-      '@ghostery/adblocker-content': 2.18.0
+      '@ghostery/adblocker-content': 2.18.1
       electron: 42.5.0
 
-  '@ghostery/adblocker-electron@2.18.0(electron@42.5.0)':
+  '@ghostery/adblocker-electron-preload@2.18.1(electron@42.5.0)':
     dependencies:
-      '@ghostery/adblocker': 2.18.0
-      '@ghostery/adblocker-electron-preload': 2.18.0(electron@42.5.0)
+      '@ghostery/adblocker-content': 2.18.1
+      electron: 42.5.0
+
+  '@ghostery/adblocker-electron@2.18.1(electron@42.5.0)':
+    dependencies:
+      '@ghostery/adblocker': 2.18.1
+      '@ghostery/adblocker-electron-preload': 2.18.1(electron@42.5.0)
       electron: 42.5.0
       tldts-experimental: 7.4.3
 
-  '@ghostery/adblocker-extended-selectors@2.18.0': {}
+  '@ghostery/adblocker-extended-selectors@2.18.1': {}
 
-  '@ghostery/adblocker@2.18.0':
+  '@ghostery/adblocker@2.18.1':
     dependencies:
-      '@ghostery/adblocker-content': 2.18.0
-      '@ghostery/adblocker-extended-selectors': 2.18.0
+      '@ghostery/adblocker-content': 2.18.1
+      '@ghostery/adblocker-extended-selectors': 2.18.1
       '@ghostery/url-parser': 1.3.1
       '@remusao/guess-url-type': 2.1.0
       '@remusao/small': 2.1.0
@@ -5246,14 +5243,11 @@ snapshots:
 
   abbrev@5.0.0: {}
 
-  acorn-jsx@5.3.2(acorn@8.15.0):
+  acorn-jsx@5.3.2(acorn@8.17.0):
     dependencies:
-      acorn: 8.15.0
+      acorn: 8.17.0
 
-  acorn@8.15.0: {}
-
-  acorn@8.17.0:
-    optional: true
+  acorn@8.17.0: {}
 
   agent-base@7.1.4: {}
 
@@ -5917,7 +5911,7 @@ snapshots:
     dependencies:
       builder-util-runtime: 9.7.0
       fs-extra: 10.1.0
-      js-yaml: 4.2.0
+      js-yaml: 4.3.0
       lazy-val: 1.0.5
       lodash.escaperegexp: 4.1.2
       lodash.isequal: 4.5.0
@@ -6115,8 +6109,8 @@ snapshots:
 
   espree@10.4.0:
     dependencies:
-      acorn: 8.15.0
-      acorn-jsx: 5.3.2(acorn@8.15.0)
+      acorn: 8.17.0
+      acorn-jsx: 5.3.2(acorn@8.17.0)
       eslint-visitor-keys: 4.2.1
 
   esquery@1.7.0:
@@ -6574,10 +6568,6 @@ snapshots:
 
   js-tokens@4.0.0: {}
 
-  js-yaml@4.2.0:
-    dependencies:
-      argparse: 2.0.1
-
   js-yaml@4.3.0:
     dependencies:
       argparse: 2.0.1
@@ -6882,7 +6872,7 @@ snapshots:
       nopt: 10.0.1
       proc-log: 7.0.0
       semver: 7.8.5
-      tar: 7.5.16
+      tar: 7.5.19
       tinyglobby: 0.2.17
       undici: 6.27.0
       which: 7.0.0
@@ -7456,14 +7446,6 @@ snapshots:
       has-flag: 4.0.0
 
   tagged-tag@1.0.0: {}
-
-  tar@7.5.16:
-    dependencies:
-      '@isaacs/fs-minipass': 4.0.1
-      chownr: 3.0.0
-      minipass: 7.1.3
-      minizlib: 3.1.0
-      yallist: 5.0.0
 
   tar@7.5.19:
     dependencies:
