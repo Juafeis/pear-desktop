@@ -150,9 +150,11 @@ jobs:
         run: pnpm typecheck
 
       - name: Run existing tests
+        uses: coactions/setup-xvfb@b6b4fcfb9f5a895edadc3bc76318fae0ac17c8b3
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
-        run: pnpm exec playwright test --retries=1 --timeout=60000
+        with:
+          run: pnpm test:debug
 
       - name: Select the custom release version
         id: version
