@@ -190,34 +190,33 @@ jobs:
               $content -notmatch '(?m)^repo:\s*pear-desktop\s*$') {
             throw "The packaged updater does not target Juafeis/pear-desktop"
           }
-          if (-not (Test-Path pack/latest.yml)) {
-            throw "electron-builder did not create pack/latest.yml"
+          $latest = Get-ChildItem pack/nsis-web -Filter latest.yml |
+            Select-Object -First 1
+          if (-not $latest) {
+            throw "electron-builder did not create pack/nsis-web/latest.yml"
           }
 
       - name: Generate checksums
         shell: pwsh
         run: |
-          $assets = Get-ChildItem pack -File |
+          New-Item -ItemType Directory -Force release-assets | Out-Null
+          $assets = Get-ChildItem pack/nsis-web -File |
             Where-Object { $_.Extension -in '.exe', '.yml', '.7z', '.blockmap' }
           if (-not $assets) {
             throw "No release assets were produced"
           }
+          $assets | Copy-Item -Destination release-assets
           $lines = foreach ($asset in $assets) {
             $hash = (Get-FileHash -Algorithm SHA256 $asset.FullName).Hash.ToLowerInvariant()
             "$hash  $($asset.Name)"
           }
-          $lines | Set-Content -Encoding ascii pack/SHA256SUMS.txt
+          $lines | Set-Content -Encoding ascii release-assets/SHA256SUMS.txt
 
       - name: Upload validated release assets
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: pear-desktop-${{ steps.version.outputs.version }}
-          path: |
-            pack/*.exe
-            pack/*.yml
-            pack/*.7z
-            pack/*.blockmap
-            pack/SHA256SUMS.txt
+          path: release-assets/*
           if-no-files-found: error
           retention-days: 14
 
