@@ -173,9 +173,9 @@ jobs:
         shell: pwsh
         run: |
           pnpm electron-builder --win nsis-web:x64 --publish never `
-            -c.publish.provider=github `
-            -c.publish.owner=Juafeis `
-            -c.publish.repo=pear-desktop
+            --config.publish.provider=github `
+            --config.publish.owner=Juafeis `
+            --config.publish.repo=pear-desktop
 
       - name: Verify updater metadata
         shell: pwsh
