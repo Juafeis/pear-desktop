@@ -149,6 +149,9 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      - name: Build application
+        run: pnpm build
+
       - name: Run existing tests
         uses: coactions/setup-xvfb@b6b4fcfb9f5a895edadc3bc76318fae0ac17c8b3
         env:
@@ -169,7 +172,6 @@ jobs:
       - name: Build the custom Windows installer
         shell: pwsh
         run: |
-          pnpm build
           pnpm electron-builder --win nsis-web:x64 --publish never `
             -c.publish.provider=github `
             -c.publish.owner=Juafeis `
