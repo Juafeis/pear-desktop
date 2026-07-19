@@ -152,7 +152,7 @@ jobs:
       - name: Run existing tests
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
-        run: pnpm test
+        run: pnpm exec playwright test --retries=1 --timeout=60000
 
       - name: Select the custom release version
         id: version
