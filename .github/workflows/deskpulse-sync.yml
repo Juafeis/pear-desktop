@@ -1,0 +1,257 @@
+name: Sync DeskPulse custom build
+
+on:
+  schedule:
+    - cron: '0 4 * * 0'
+  workflow_dispatch:
+    inputs:
+      release_current:
+        description: Build and release the current deskpulse-custom branch even when upstream has not changed
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: deskpulse-custom-sync
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '24.x'
+  PNPM_VERSION: '11'
+  FORK_REPOSITORY: Juafeis/pear-desktop
+  UPSTREAM_REPOSITORY: pear-devs/pear-desktop
+
+jobs:
+  sync:
+    name: Sync upstream and prepare PR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      has_changes: ${{ steps.changes.outputs.has_changes }}
+      pr_number: ${{ steps.pull_request.outputs.pr_number }}
+      checkout_ref: ${{ steps.checkout_ref.outputs.ref }}
+      should_build: ${{ steps.checkout_ref.outputs.should_build }}
+    steps:
+      - name: Check out the trusted custom branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: deskpulse-custom
+          fetch-depth: 0
+
+      - name: Fast-forward master from upstream
+        shell: bash
+        run: |
+          set -euo pipefail
+          git remote add upstream "https://github.com/${UPSTREAM_REPOSITORY}.git"
+          git fetch --no-tags upstream master
+          git fetch --no-tags origin master deskpulse-custom
+          git merge-base --is-ancestor origin/master upstream/master
+          git push origin upstream/master:master
+
+      - name: Check whether custom is behind master
+        id: changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin master deskpulse-custom
+          if git merge-base --is-ancestor origin/master origin/deskpulse-custom; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create or reuse the upstream sync PR
+        id: pull_request
+        if: steps.changes.outputs.has_changes == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          pr_number="$(
+            gh pr list \
+              --repo "$FORK_REPOSITORY" \
+              --base deskpulse-custom \
+              --head master \
+              --state open \
+              --json number \
+              --jq '.[0].number // empty'
+          )"
+          if [[ -z "$pr_number" ]]; then
+            pr_url="$(
+              gh pr create \
+                --repo "$FORK_REPOSITORY" \
+                --base deskpulse-custom \
+                --head master \
+                --title "chore: sync upstream Pear Desktop" \
+                --body "Automated weekly synchronization from \`pear-devs/pear-desktop:master\`. This PR is merged only after the Windows validation and custom build complete successfully."
+            )"
+            pr_number="${pr_url##*/}"
+          fi
+          echo "pr_number=$pr_number" >> "$GITHUB_OUTPUT"
+
+      - name: Select the exact source to validate
+        id: checkout_ref
+        shell: bash
+        env:
+          HAS_CHANGES: ${{ steps.changes.outputs.has_changes }}
+          PR_NUMBER: ${{ steps.pull_request.outputs.pr_number }}
+          RELEASE_CURRENT: ${{ inputs.release_current || 'false' }}
+        run: |
+          set -euo pipefail
+          if [[ "$HAS_CHANGES" == "true" ]]; then
+            echo "ref=refs/pull/${PR_NUMBER}/merge" >> "$GITHUB_OUTPUT"
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+          elif [[ "$RELEASE_CURRENT" == "true" ]]; then
+            echo "ref=deskpulse-custom" >> "$GITHUB_OUTPUT"
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=deskpulse-custom" >> "$GITHUB_OUTPUT"
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  validate_and_build:
+    name: Validate and build Windows x64
+    needs: sync
+    if: needs.sync.outputs.should_build == 'true'
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - name: Check out the prospective merged source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: ${{ needs.sync.outputs.checkout_ref }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Run existing tests
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+        run: pnpm test
+
+      - name: Select the custom release version
+        id: version
+        shell: pwsh
+        run: |
+          $baseVersion = node -p "require('./package.json').version"
+          $version = "$baseVersion-deskpulse.${{ github.run_number }}"
+          npm pkg set "version=$version"
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "tag=v$version" >> $env:GITHUB_OUTPUT
+
+      - name: Build the custom Windows installer
+        shell: pwsh
+        run: |
+          pnpm build
+          pnpm electron-builder --win nsis-web:x64 --publish never `
+            -c.publish.provider=github `
+            -c.publish.owner=Juafeis `
+            -c.publish.repo=pear-desktop
+
+      - name: Verify updater metadata
+        shell: pwsh
+        run: |
+          $updateConfig = Get-ChildItem pack -Recurse -Filter app-update.yml |
+            Select-Object -First 1
+          if (-not $updateConfig) {
+            throw "The packaged app does not contain app-update.yml"
+          }
+          $content = Get-Content -Raw $updateConfig.FullName
+          if ($content -notmatch '(?m)^owner:\s*Juafeis\s*$' -or
+              $content -notmatch '(?m)^repo:\s*pear-desktop\s*$') {
+            throw "The packaged updater does not target Juafeis/pear-desktop"
+          }
+          if (-not (Test-Path pack/latest.yml)) {
+            throw "electron-builder did not create pack/latest.yml"
+          }
+
+      - name: Generate checksums
+        shell: pwsh
+        run: |
+          $assets = Get-ChildItem pack -File |
+            Where-Object { $_.Extension -in '.exe', '.yml', '.7z', '.blockmap' }
+          if (-not $assets) {
+            throw "No release assets were produced"
+          }
+          $lines = foreach ($asset in $assets) {
+            $hash = (Get-FileHash -Algorithm SHA256 $asset.FullName).Hash.ToLowerInvariant()
+            "$hash  $($asset.Name)"
+          }
+          $lines | Set-Content -Encoding ascii pack/SHA256SUMS.txt
+
+      - name: Upload validated release assets
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: pear-desktop-${{ steps.version.outputs.version }}
+          path: |
+            pack/*.exe
+            pack/*.yml
+            pack/*.7z
+            pack/*.blockmap
+            pack/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14
+
+  merge_and_release:
+    name: Merge validated PR and publish release
+    needs:
+      - sync
+      - validate_and_build
+    if: needs.validate_and_build.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Merge the validated upstream sync PR
+        if: needs.sync.outputs.has_changes == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ needs.sync.outputs.pr_number }}
+        run: gh pr merge "$PR_NUMBER" --repo "$FORK_REPOSITORY" --merge
+
+      - name: Download the already validated artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: pear-desktop-${{ needs.validate_and_build.outputs.version }}
+          path: release-assets
+
+      - name: Publish the custom release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.validate_and_build.outputs.tag }}
+          VERSION: ${{ needs.validate_and_build.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release create "$TAG" \
+            --repo "$FORK_REPOSITORY" \
+            --target deskpulse-custom \
+            --title "Pear Desktop $VERSION" \
+            --notes "Validated DeskPulse custom build based on the latest synchronized Pear Desktop master." \
+            release-assets/*
