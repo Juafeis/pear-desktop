@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { createServer as createHttpServer } from 'node:http';
 import { createServer as createHttpsServer } from 'node:https';
@@ -5,6 +6,7 @@ import { createServer as createHttpsServer } from 'node:https';
 import { serve, upgradeWebSocket } from '@hono/node-server';
 import { swaggerUI } from '@hono/swagger-ui';
 import { OpenAPIHono as Hono } from '@hono/zod-openapi';
+import { ipcMain } from 'electron';
 import { cors } from 'hono/cors';
 import { jwt } from 'hono/jwt';
 import { WebSocketServer } from 'ws';
@@ -136,6 +138,33 @@ export const backend = createBackend<BackendType, APIServerConfig>({
         backendCtx.window.webContents.executeJavaScript(
           'document.querySelector("#like-button-renderer")?.likeStatus',
         ) as Promise<LikeType>,
+      (playlistId, videoId) =>
+        new Promise<boolean>((resolve, reject) => {
+          const responseChannel = `peard:playlist-contains-response:${randomUUID()}`;
+          const timeout = setTimeout(() => {
+            ipcMain.removeAllListeners(responseChannel);
+            reject(new Error('Checking playlist membership timed out'));
+          }, 10_000);
+
+          ipcMain.once(
+            responseChannel,
+            (_, contains: boolean, error?: string) => {
+              clearTimeout(timeout);
+              if (error) {
+                reject(new Error(error));
+              } else {
+                resolve(contains === true);
+              }
+            },
+          );
+
+          backendCtx.window.webContents.send(
+            'peard:check-playlist-membership',
+            responseChannel,
+            playlistId,
+            videoId,
+          );
+        }),
       () => this.volumeState,
     );
     registerAuth(this.app, backendCtx);
