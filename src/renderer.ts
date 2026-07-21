@@ -303,11 +303,61 @@ async function onApiLoaded() {
         return Object.values(record).some((item) => containsVideo(item, seen));
       };
 
+      const containsAnyVideo = (
+        value: unknown,
+        seen = new WeakSet<object>(),
+      ): boolean => {
+        if (value === null || typeof value !== 'object') return false;
+        if (seen.has(value)) return false;
+        seen.add(value);
+        if (Array.isArray(value))
+          return value.some((item) => containsAnyVideo(item, seen));
+        const record = value as Record<string, unknown>;
+        if (typeof record.videoId === 'string' && record.videoId.length > 0) {
+          return true;
+        }
+        return Object.values(record).some((item) =>
+          containsAnyVideo(item, seen),
+        );
+      };
+
       try {
-        const result = await app.networkManager.fetch('/browse', {
-          browseId: playlistId,
-        });
-        window.ipcRenderer.send(responseChannel, containsVideo(result));
+        // YouTube Music accepts playlist browse IDs in both forms depending
+        // on the renderer version.  A plain playlist ID can return an empty
+        // shell, while the VL-prefixed form returns the actual video rows.
+        const browseIds = [
+          playlistId,
+          playlistId.startsWith('VL') ? playlistId : `VL${playlistId}`,
+        ].filter(
+          (id, index, ids) => id.length > 0 && ids.indexOf(id) === index,
+        );
+        let lastError: unknown;
+        for (const browseId of browseIds) {
+          try {
+            const result = await app.networkManager.fetch('/browse', {
+              browseId,
+            });
+            if (containsVideo(result)) {
+              window.ipcRenderer.send(responseChannel, true);
+              return;
+            }
+            // If this response contains playlist rows, it is authoritative:
+            // the requested video is simply not in the list.  Otherwise try
+            // the alternate browse ID before declaring it absent.
+            if (containsAnyVideo(result)) {
+              window.ipcRenderer.send(responseChannel, false);
+              return;
+            }
+          } catch (error) {
+            lastError = error;
+          }
+        }
+        if (lastError) {
+          throw lastError instanceof Error
+            ? lastError
+            : new Error('Failed to load playlist information');
+        }
+        window.ipcRenderer.send(responseChannel, false);
       } catch (error) {
         window.ipcRenderer.send(
           responseChannel,
