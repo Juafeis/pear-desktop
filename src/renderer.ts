@@ -277,6 +277,49 @@ async function onApiLoaded() {
     },
   );
   window.ipcRenderer.on(
+    'peard:check-playlist-membership',
+    async (_, responseChannel: string, playlistId: string, videoId: string) => {
+      const app = document.querySelector<MusicPlayerAppElement>('ytmusic-app');
+      if (!app) {
+        window.ipcRenderer.send(
+          responseChannel,
+          false,
+          'YouTube Music is not ready',
+        );
+        return;
+      }
+
+      const containsVideo = (
+        value: unknown,
+        seen = new WeakSet<object>(),
+      ): boolean => {
+        if (value === null || typeof value !== 'object') return false;
+        if (seen.has(value)) return false;
+        seen.add(value);
+        if (Array.isArray(value))
+          return value.some((item) => containsVideo(item, seen));
+        const record = value as Record<string, unknown>;
+        if (record.videoId === videoId) return true;
+        return Object.values(record).some((item) => containsVideo(item, seen));
+      };
+
+      try {
+        const result = await app.networkManager.fetch('/browse', {
+          browseId: playlistId,
+        });
+        window.ipcRenderer.send(responseChannel, containsVideo(result));
+      } catch (error) {
+        window.ipcRenderer.send(
+          responseChannel,
+          false,
+          error instanceof Error
+            ? error.message
+            : 'Failed to load playlist information',
+        );
+      }
+    },
+  );
+  window.ipcRenderer.on(
     'peard:move-in-queue',
     (_, fromIndex: number, toIndex: number) => {
       const queue = document.querySelector<QueueElement>('#queue');

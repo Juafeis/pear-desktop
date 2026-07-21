@@ -12,6 +12,7 @@ import { API_VERSION } from '../api-version';
 import {
   AddSongsToPlaylistSchema,
   AddSongToQueueSchema,
+  PlaylistContainsParamsSchema,
   GoBackSchema,
   GoForwardScheme,
   MoveSongInQueueSchema,
@@ -505,6 +506,33 @@ const routes = {
       },
     },
   }),
+  playlistContains: createRoute({
+    method: 'get',
+    path: `/api/${API_VERSION}/playlists/{playlistId}/contains/{videoId}`,
+    summary: 'check playlist membership',
+    description: 'Check whether a video is present in a playlist',
+    request: {
+      params: PlaylistContainsParamsSchema,
+    },
+    responses: {
+      200: {
+        description: 'Success',
+        content: {
+          'application/json': {
+            schema: z.object({ contains: z.boolean() }),
+          },
+        },
+      },
+      500: {
+        description: 'Failed to check playlist membership',
+        content: {
+          'application/json': {
+            schema: z.object({ error: z.string() }),
+          },
+        },
+      },
+    },
+  }),
   moveSongInQueue: createRoute({
     method: 'patch',
     path: `/api/${API_VERSION}/queue/{index}`,
@@ -609,6 +637,10 @@ export const register = (
   songInfoGetter: () => PromiseOrValue<SongInfo | undefined>,
   repeatModeGetter: () => PromiseOrValue<RepeatMode | undefined>,
   likeTypeGetter: () => PromiseOrValue<LikeType | undefined>,
+  playlistContainsGetter: (
+    playlistId: string,
+    videoId: string,
+  ) => PromiseOrValue<boolean>,
   volumeStateGetter: () => PromiseOrValue<VolumeState | undefined>,
 ) => {
   const controller = getSongControls(window);
@@ -882,6 +914,27 @@ export const register = (
             ? error.message
             : 'Failed to add songs to playlist',
       });
+    }
+  });
+  app.openapi(routes.playlistContains, async (ctx) => {
+    const { playlistId, videoId } = ctx.req.valid('param');
+    try {
+      return ctx.json(
+        {
+          contains: await playlistContainsGetter(playlistId, videoId),
+        },
+        200,
+      );
+    } catch (error) {
+      return ctx.json(
+        {
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to check playlist membership',
+        },
+        500,
+      );
     }
   });
   app.openapi(routes.moveSongInQueue, (ctx) => {
