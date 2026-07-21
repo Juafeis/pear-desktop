@@ -205,8 +205,16 @@ jobs:
           if (-not $assets) {
             throw "No release assets were produced"
           }
-          $assets | Copy-Item -Destination release-assets
-          $lines = foreach ($asset in $assets) {
+          foreach ($asset in $assets) {
+            if ($asset.Name -like '*Web.Setup*.exe') {
+              $destination = Join-Path $PWD "release-assets/YouTube-Music-Web-Setup-${{ steps.version.outputs.version }}.exe"
+              Copy-Item -LiteralPath $asset.FullName -Destination $destination
+            } else {
+              Copy-Item -LiteralPath $asset.FullName -Destination release-assets
+            }
+          }
+          $releaseAssets = Get-ChildItem release-assets -File
+          $lines = foreach ($asset in $releaseAssets) {
             $hash = (Get-FileHash -Algorithm SHA256 $asset.FullName).Hash.ToLowerInvariant()
             "$hash  $($asset.Name)"
           }
