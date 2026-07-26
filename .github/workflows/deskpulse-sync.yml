@@ -40,15 +40,59 @@ jobs:
           ref: deskpulse-custom
           fetch-depth: 0
 
-      - name: Fast-forward master from upstream
+      - name: Sync trusted upstream code into master
         shell: bash
         run: |
           set -euo pipefail
           git remote add upstream "https://github.com/${UPSTREAM_REPOSITORY}.git"
           git fetch --no-tags upstream master
           git fetch --no-tags origin master deskpulse-custom
-          git merge-base --is-ancestor origin/master upstream/master
-          git push origin upstream/master:master
+
+          upstream_head="$(git rev-parse upstream/master)"
+          if git merge-base --is-ancestor origin/master "$upstream_head"; then
+            upstream_base="$(git rev-parse origin/master)"
+          else
+            upstream_base="$(
+              git log -1 \
+                --format='%(trailers:key=Upstream-Commit,valueonly)' \
+                origin/master |
+                grep -v '^[[:space:]]*$' |
+                tail -n 1
+            )"
+            if [[ -z "$upstream_base" ]]; then
+              echo "::error::origin/master is not a direct upstream commit and has no Upstream-Commit trailer"
+              exit 1
+            fi
+            git cat-file -e "${upstream_base}^{commit}"
+            git merge-base --is-ancestor "$upstream_base" "$upstream_head"
+            if ! git diff --quiet \
+              "$upstream_base" origin/master \
+              -- . ':(exclude).github/workflows/**'; then
+              echo "::error::origin/master drifted from its recorded upstream source outside .github/workflows"
+              exit 1
+            fi
+          fi
+
+          if git diff --quiet \
+            "$upstream_base" "$upstream_head" \
+            -- . ':(exclude).github/workflows/**'; then
+            echo "No trusted upstream code changes to synchronize"
+            exit 0
+          fi
+
+          git checkout --detach origin/master
+          git diff --binary \
+            "$upstream_base" "$upstream_head" \
+            -- . ':(exclude).github/workflows/**' \
+            > "$RUNNER_TEMP/upstream-code.patch"
+          git apply --index --3way "$RUNNER_TEMP/upstream-code.patch"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit \
+            -m "chore: sync upstream Pear Desktop" \
+            -m "Upstream-Commit: $upstream_head"
+          git push origin HEAD:master
 
       - name: Check whether custom is behind master
         id: changes
