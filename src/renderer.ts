@@ -18,6 +18,7 @@ import {
   loadAllRendererPlugins,
 } from './loader/renderer';
 import { startingPages } from './providers/extracted-data';
+import { shouldPlayWhenToggling } from './providers/media-playback';
 import { setupSongInfo } from './providers/song-info-front';
 
 import type { MusicPlayer } from '@/types/music-player';
@@ -85,8 +86,12 @@ async function onApiLoaded() {
     api?.pauseVideo();
   });
   window.ipcRenderer.on('peard:toggle-play', (_) => {
-    if (api?.getPlayerState() === 2) api?.playVideo();
-    else api?.pauseVideo();
+    const video = document.querySelector<HTMLVideoElement>('video');
+    if (shouldPlayWhenToggling(video?.paused, api?.getPlayerState())) {
+      api?.playVideo();
+    } else {
+      api?.pauseVideo();
+    }
   });
   window.ipcRenderer.on('peard:seek-to', (_, t: number) => api!.seekTo(t));
   window.ipcRenderer.on('peard:seek-by', (_, t: number) => api!.seekBy(t));

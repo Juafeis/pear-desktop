@@ -1,6 +1,7 @@
 import { LikeType, type GetState } from '@/types/datahost-get-state';
 
 import { singleton } from './decorators';
+import { getPlaybackSnapshot } from './media-playback';
 
 import type { SongInfo } from './song-info';
 import type { MusicPlayer } from '@/types/music-player';
@@ -226,13 +227,14 @@ export const setupSongInfo = (api: MusicPlayer) => {
   });
 
   const playPausedHandler = (e: Event, status: string) => {
-    if (
-      e.target instanceof HTMLVideoElement &&
-      Math.round(e.target.currentTime) > 0
-    ) {
+    if (e.target instanceof HTMLVideoElement) {
+      const playback = getPlaybackSnapshot(
+        status === 'pause',
+        e.target.currentTime,
+      );
       window.ipcRenderer.send('peard:play-or-paused', {
-        isPaused: status === 'pause',
-        elapsedSeconds: Math.floor(e.target.currentTime),
+        isPaused: playback.isPaused,
+        elapsedSeconds: playback.elapsedSeconds,
       });
     }
   };
@@ -349,8 +351,12 @@ export const setupSongInfo = (api: MusicPlayer) => {
       playerOverlay?.playerOverlayRenderer?.browserMediaSession?.browserMediaSessionRenderer?.album?.runs?.at(
         0,
       )?.text;
-    data.videoDetails.elapsedSeconds = 0;
-    data.videoDetails.isPaused = false;
+    const playback = getPlaybackSnapshot(
+      video?.paused ?? false,
+      video?.currentTime ?? 0,
+    );
+    data.videoDetails.elapsedSeconds = playback.elapsedSeconds;
+    data.videoDetails.isPaused = playback.isPaused;
 
     window.ipcRenderer.send('peard:video-src-changed', data);
   }
