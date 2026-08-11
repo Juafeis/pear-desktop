@@ -1,6 +1,8 @@
 import { t } from '@/i18n';
 import { createPlugin } from '@/utils';
 
+import { getPauseDecision } from './pause-gate';
+
 import type { MusicPlayer } from '@/types/music-player';
 import type { VideoDataChanged } from '@/types/video-data-changed';
 
@@ -15,6 +17,10 @@ export default createPlugin<
   {
     config: DisableAutoPlayPluginConfig | null;
     api: MusicPlayer | null;
+    hasPaused: boolean;
+    pendingVideo: HTMLVideoElement | null;
+    fallbackTimeout: number | null;
+    clearPendingPause: () => void;
     eventListener: (event: CustomEvent<VideoDataChanged>) => void;
     timeUpdateListener: (e: Event) => void;
   },
@@ -47,26 +53,60 @@ export default createPlugin<
   renderer: {
     config: null,
     api: null,
-    eventListener(event: CustomEvent<VideoDataChanged>) {
-      if (this.config?.applyOnce) {
-        document.removeEventListener('videodatachange', this.eventListener);
-      }
+    hasPaused: false,
+    pendingVideo: null,
+    fallbackTimeout: null,
+    clearPendingPause() {
+      this.pendingVideo?.removeEventListener(
+        'timeupdate',
+        this.timeUpdateListener,
+      );
+      this.pendingVideo = null;
 
-      if (event.detail.name === 'dataloaded') {
-        this.api?.pauseVideo();
-        document
-          .querySelector<HTMLVideoElement>('video')
-          ?.addEventListener('timeupdate', this.timeUpdateListener, {
-            once: true,
-          });
+      if (this.fallbackTimeout !== null) {
+        window.clearTimeout(this.fallbackTimeout);
+        this.fallbackTimeout = null;
       }
     },
+    eventListener(event: CustomEvent<VideoDataChanged>) {
+      const decision = getPauseDecision(
+        event.detail.name,
+        this.config?.applyOnce ?? false,
+        this.hasPaused,
+      );
+      this.hasPaused = decision.hasPaused;
+
+      if (!decision.shouldPause) {
+        return;
+      }
+
+      this.clearPendingPause();
+      this.api?.pauseVideo();
+
+      const video = document.querySelector<HTMLVideoElement>('video');
+      if (!video) {
+        return;
+      }
+
+      this.pendingVideo = video;
+      video.addEventListener('timeupdate', this.timeUpdateListener, {
+        once: true,
+      });
+      this.fallbackTimeout = window.setTimeout(() => {
+        this.clearPendingPause();
+      }, 1500);
+    },
     timeUpdateListener(e: Event) {
-      if (e.target instanceof HTMLVideoElement) {
-        e.target.pause();
+      const video = e.currentTarget;
+      this.clearPendingPause();
+
+      if (video instanceof HTMLVideoElement) {
+        video.pause();
       }
     },
     async start({ getConfig }) {
+      this.clearPendingPause();
+      this.hasPaused = false;
       this.config = await getConfig();
     },
     onPlayerApiReady(api) {
@@ -76,6 +116,8 @@ export default createPlugin<
     },
     stop() {
       document.removeEventListener('videodatachange', this.eventListener);
+      this.clearPendingPause();
+      this.api = null;
     },
     onConfigChange(newConfig) {
       this.config = newConfig;
